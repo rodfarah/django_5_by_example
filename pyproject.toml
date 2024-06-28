@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "django-5-by-example"
+version = "0.1.0"
+description = "\"Django 5 by example\" is a book written by Antonio Melé. Rodrigo Farah as a student."
+authors = ["Rodrigo Farah <digofarah@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
