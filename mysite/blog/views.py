@@ -5,7 +5,8 @@ from .models import Post
 
 def post_list(request):
     posts = Post.published.all()
-    return render(request, 'blog/post/list.html', {'posts': posts})
+    return render(request, template_name='blog/post/list.html',
+                  context={'posts': posts})
 
 
 def post_detail(request, id):
