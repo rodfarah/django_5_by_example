@@ -1,9 +1,11 @@
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.shortcuts import get_object_or_404, render
+from django.views.generic import ListView
 
 from .models import Post
 
 
+# Post_list is deprecated because of its class based view down bellow
 def post_list(request):
     # 'published' is our new Manager, set up in model
     post_list = Post.published.all()
@@ -34,3 +36,13 @@ def post_detail(request, year, month, day, post):
         publish__day=day
     )
     return render(request, 'blog/post/detail.html', {'post': post})
+
+
+class PostListView(ListView):
+    """
+    Alternative post list view
+    """
+    queryset = Post.published.all()
+    context_object_name = 'posts'
+    paginate_by = 3
+    template_name = 'blog/post/list.html'
