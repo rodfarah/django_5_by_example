@@ -9,6 +9,10 @@ readme = "README.md"
 python = "^3.10"
 django = "^5.0.6"
 python-decouple = "^3.8"
+django-taggit = "^5.0.1"
+markdown = "^3.6"
+psycopg2-binary = "^2.9.9"
+mypy = "^1.11.1"
 
 
 [build-system]
