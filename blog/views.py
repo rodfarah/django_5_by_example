@@ -1,3 +1,9 @@
+from django.contrib.postgres.search import (
+    SearchQuery,
+    SearchRank,
+    SearchVector,
+    TrigramSimilarity,
+)
 from django.core.mail import send_mail
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Count
@@ -6,7 +12,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import ListView
 from taggit.models import Tag
 
-from .forms import CommentForm, EmailPostForm
+from .forms import CommentForm, EmailPostForm, SearchForm
 from .models import Post
 
 
@@ -60,7 +66,9 @@ def post_detail(request, year, month, day, post):
 
     # List of similar posts
     post_tags_ids = post.tags.values_list("id", flat=True)
-    similar_posts = Post.published.filter(tags__in=post_tags_ids).exclude(id=post.id)
+    similar_posts = Post.published.filter(tags__in=post_tags_ids).exclude(
+        id=post.id
+    )
     similar_posts = similar_posts.annotate(same_tags=Count("tags")).order_by(
         "-same_tags", "-publish"
     )[:4]
@@ -90,7 +98,9 @@ class PostListView(ListView):
 
 def post_share(request, post_id):
     # Retrieve post by id
-    post = get_object_or_404(klass=Post, id=post_id, status=Post.Status.PUBLISHED)
+    post = get_object_or_404(
+        klass=Post, id=post_id, status=Post.Status.PUBLISHED
+    )
     sent = False
 
     if request.method == "POST":
@@ -102,7 +112,8 @@ def post_share(request, post_id):
             # send email
             post_url = request.build_absolute_uri(post.get_absolute_url())
             subject = (
-                f"{cd['name']} ({cd['email']}) " f"reccomends you read {post.title}"
+                f"{cd['name']} ({cd['email']}) "
+                f"reccomends you read {post.title}"
             )
             message = (
                 f"Read {post.title} at {post_url}\n\n"
@@ -126,7 +137,9 @@ def post_share(request, post_id):
 
 @require_POST
 def post_comment(request, post_id):
-    post = get_object_or_404(klass=Post, id=post_id, status=Post.Status.PUBLISHED)
+    post = get_object_or_404(
+        klass=Post, id=post_id, status=Post.Status.PUBLISHED
+    )
     comment = None
     # A comment was posted
     form = CommentForm(data=request.POST)
@@ -145,4 +158,49 @@ def post_comment(request, post_id):
             "post": post,
             "form": form,
         },
+    )
+
+
+def post_search(request):
+    form = SearchForm()
+    query = None
+    results = []
+
+    if "query" in request.GET:
+        form = SearchForm(request.GET)
+        if form.is_valid():
+            query = form.cleaned_data["query"]
+            # # SearchVector allows me to search for two fields combined
+            # # Weigh "A" boosts vector when ordering results by relevancy.
+            # search_vector = SearchVector("title", weight="A") + SearchVector(
+            #     "body", weight="B"
+            # )
+            # # SearchQuery deletes unuseful words of query, like 'of', 'the'
+            # search_query = SearchQuery(query)
+            # # annotate adds an extra temporary field to the search query \
+            # # without saving it into db.
+            # # SearchRank ranking function that orders results based on how \
+            # # often the query terms appear and how close together they are
+            # results = (
+            #     Post.published.annotate(
+            #         search=search_vector,
+            #         rank=SearchRank(search_vector, search_query),
+            #     )
+            #     .filter(rank__gte=0.3)
+            #     .order_by("-rank")
+            # )
+
+            # Trigram considers similar words on searching words. ie: \
+            # iender vs fender
+            results = (
+                Post.published.annotate(
+                    similarity=TrigramSimilarity("title", query),
+                )
+                .filter(similarity__gt=0.1)
+                .order_by("-similarity")
+            )
+    return render(
+        request=request,
+        template_name="blog/post/search.html",
+        context={"form": form, "query": query, "results": results},
     )
